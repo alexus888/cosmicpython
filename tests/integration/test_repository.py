@@ -1,7 +1,7 @@
 # pylint: disable=protected-access
 from sqlalchemy import text
-import model
-import repository
+from allocation.domain import model
+from allocation.adapters import repository
 
 
 def test_repository_can_save_a_batch(session):
@@ -18,21 +18,32 @@ def test_repository_can_save_a_batch(session):
 
 
 def insert_order_line(session):
-    query = (
-        "INSERT INTO order_lines (orderid, sku, qty)"
-        ' VALUES ("order1", "GENERIC-SOFA", 12) returning id'
+    session.execute(
+        text(
+            "INSERT INTO order_lines (orderid, sku, qty)"
+            ' VALUES ("order1", "GENERIC-SOFA", 12)'
+        )
     )
-    result = session.execute(text(query))
-    return result.fetchone().id
+    [[orderline_id]] = session.execute(
+        text("SELECT id FROM order_lines WHERE orderid=:orderid AND sku=:sku"),
+        dict(orderid="order1", sku="GENERIC-SOFA"),
+    )
+    return orderline_id
 
 
 def insert_batch(session, batch_id):
-    query = (
-        "INSERT INTO batches (reference, sku, _purchased_quantity, eta)"
-        ' VALUES (:batch_id, "GENERIC-SOFA", 100, null) returning id'
+    session.execute(
+        text(
+            "INSERT INTO batches (reference, sku, _purchased_quantity, eta)"
+            ' VALUES (:batch_id, "GENERIC-SOFA", 100, null)'
+        ),
+        dict(batch_id=batch_id),
     )
-    result = session.execute(text(query), dict(batch_id=batch_id))
-    return result.fetchone().id
+    [[batch_id]] = session.execute(
+        text('SELECT id FROM batches WHERE reference=:batch_id AND sku="GENERIC-SOFA"'),
+        dict(batch_id=batch_id),
+    )
+    return batch_id
 
 
 def insert_allocation(session, orderline_id, batch_id):
@@ -46,20 +57,15 @@ def insert_allocation(session, orderline_id, batch_id):
 
 
 def test_repository_can_retrieve_a_batch_with_allocations(session):
-    # arrange
-    ref = "batch1"
-    expected = model.Batch(ref, "GENERIC-SOFA", 100, eta=None)
-
-    batch_id = insert_batch(session, ref)
     orderline_id = insert_order_line(session)
-    insert_allocation(session, orderline_id, batch_id)
+    batch1_id = insert_batch(session, "batch1")
+    insert_batch(session, "batch2")
+    insert_allocation(session, orderline_id, batch1_id)
 
     repo = repository.SqlAlchemyRepository(session)
-
-    # act
     retrieved = repo.get("batch1")
 
-    # assert
+    expected = model.Batch("batch1", "GENERIC-SOFA", 100, eta=None)
     assert retrieved == expected  # Batch.__eq__ only compares reference
     assert retrieved.sku == expected.sku
     assert retrieved._purchased_quantity == expected._purchased_quantity

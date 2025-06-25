@@ -1,12 +1,12 @@
 from sqlalchemy import Table, MetaData, Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import registry as Registry
-import model
+
+from allocation.domain import model
 
 
 registry = Registry()
 metadata = MetaData()
-
 
 order_lines = Table(
     "order_lines",
@@ -42,7 +42,7 @@ def start_mappers():
         order_lines,
     )
 
-    batches_mapper = registry.map_imperatively(
+    registry.map_imperatively(
         model.Batch,
         batches,
         properties={
@@ -53,4 +53,3 @@ def start_mappers():
             )
         },
     )
-    _ = batches_mapper

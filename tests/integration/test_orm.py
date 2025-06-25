@@ -1,4 +1,4 @@
-import model
+from allocation.domain import model
 from datetime import date
 from sqlalchemy import text
 
