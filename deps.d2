@@ -1,0 +1,21 @@
+repository --> domain
+
+flask_app --> flask
+flask_app --> domain
+flask_app --> service_layer_services 
+flask_app --> unit_of_work
+flask_app --> orm
+
+orm --> domain
+orm --> sqlalchemy
+
+config --> os
+
+unit_of_work --> sqlalchemy
+unit_of_work --> config
+unit_of_work --> repository
+
+service_layer_services --> domain
+service_layer_services --> unit_of_work 
+
+
